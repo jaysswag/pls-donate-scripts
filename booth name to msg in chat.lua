@@ -1,4 +1,4 @@
---basically converts all msgs in chat into your boot, you get alot of attention using this lmao
+--basically converts all msgs in chat into your booth, you get alot of attention using this lmao
 for i, v in pairs(game.Players:GetChildren()) do 
     v.Chatted:Connect(function(m)
         local args = {
