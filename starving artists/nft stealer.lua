@@ -1,41 +1,125 @@
-local function assemblePayload(targetEasel) -- thanks Fuu sexy coder pls give me synapse!!
-   local cells = {}
-   local name = targetEasel.ArtInfo.Frame.Info.ArtName.Text
-   local frameColor = targetEasel.ArtInfo.Frame.Info.Frame.BackgroundColor3:ToHex()
-   
-   local grid = targetEasel.Canvas.SurfaceGui.Grid
-   for i = 1, 1024 do
-       cells[i] = grid[i].BackgroundColor3:ToHex()
-   end
-   
-   local payload = {}
-   payload["FrameColor"] = frameColor
-   payload["Name"] = name
-   payload["Cells"] = cells
-   
-   return(payload)
+local curcam = workspace.CurrentCamera
+local plots = workspace:WaitForChild("Plots")
+local startergui = game:GetService("StarterGui")
+local lp = game:GetService("Players").LocalPlayer
+local createart = game:GetService("ReplicatedStorage").Remotes.CreateArt
+
+local basep = Instance.new("ProximityPrompt")
+local scale = curcam.ViewportSize.Y / 1017
+
+basep.Name = "CopyPrompt"
+basep.ActionText = "Copy Art"
+basep.ObjectText = "Canvas"
+basep.HoldDuration = .5
+basep.KeyboardKeyCode = Enum.KeyCode.G
+basep.ClickablePrompt = false
+basep.MaxActivationDistance = 7
+basep.RequiresLineOfSight = true
+basep.UIOffset = Vector2.new(0, 80 * scale)
+
+local function sendMessage(title, msg)
+    startergui:SetCore("SendNotification", {
+        Title = title,
+        Text = msg
+    })
 end
 
-local function clonePainting(targetEasel)
-   local payload = assemblePayload(targetEasel)
-   local remote = game.ReplicatedStorage.Remotes.CreateArt
-   remote:InvokeServer(payload)
+local chair = plots:FindFirstChild(lp.Name)
+
+if not chair then
+    chair = plots:FindFirstChild("Unclaimed")
+    local prompt = chair and chair:WaitForChild("Table"):WaitForChild("Username"):WaitForChild("ClaimAttach"):WaitForChild("BoothClaimPrompt")
+    
+    if not prompt then
+        sendMessage("Failed!", "No free stands????")
+        return
+    end
+    
+    while not plots:FindFirstChild(lp.Name) do
+        if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
+            lp.Character.HumanoidRootPart.CFrame = prompt.Parent.Parent.CFrame + Vector3.new(0, 5, 0)
+        end
+        
+        fireproximityprompt(prompt, 1)
+        task.wait()
+    end
 end
 
-local mouse = game.Players.LocalPlayer:GetMouse()
-local debounce = false
+chair = chair.Table:WaitForChild("Stool"):WaitForChild("Seat")
 
-mouse.Button1Down:Connect(function()
-if (mouse.Target) then
-   if (mouse.Target.Name == "Canvas" and not debounce) then
-       clonePainting(mouse.Target.Parent)
-       debounce = true
-   end
+local function copyArt(easel)
+    local pixels = easel.Canvas.SurfaceGui.Grid:GetChildren()
+    local colors = {}
+
+    for i, obj in pairs(pixels) do
+        local num = tonumber(obj.Name)
+        
+        if num and obj.ClassName == "Frame" then
+            colors[num] = obj.BackgroundColor3:ToHex()
+        end
+    end
+
+    createart:InvokeServer({
+        Cells = colors,
+        FrameColor = easel.Art.Color:ToHex(),
+        Name = easel.ArtInfo.Frame.Info.ArtName.Text
+    })
 end
+
+local function Bypass(easel, humanoid)
+    local oldpos = humanoid.RootPart.CFrame
+ 
+    chair:Sit(humanoid)
+    chair:WaitForChild("SeatWeld")
+    copyArt(easel)
+    while chair:FindFirstChild("SeatWeld") do
+        lp.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        task.wait() 
+    end
+ 
+    humanoid.RootPart.CFrame = oldpos
+end
+
+local function addProximity(easel)
+    local prox = basep:Clone()
+    
+    prox.Triggered:Connect(function()
+        if easel:FindFirstChild("Art") then
+            if lp.Character and lp.Character:FindFirstChild("Humanoid") then
+                Bypass(easel, lp.Character.Humanoid)
+               
+                sendMessage("Success!", "Art (should be) copied.")
+                return
+            end
+            
+            sendMessage("Failed to copy!", "Character or humanoid is missing.")
+            return
+        end
+        
+        sendMessage("Failed to copy!", "Art is blank.")
+    end)
+    
+    prox.Parent = easel
+end
+
+local function plotAdded(plot)
+    local easels = plot:WaitForChild("Easels")
+    
+    for i, easel in pairs(easels:GetChildren()) do
+        addProximity(easel)
+    end
+    
+    easels.ChildAdded:Connect(function(easel) 
+        addProximity(easel)
+    end)
+end
+
+for i, plot in pairs(plots:GetChildren()) do
+    plotAdded(plot)
+end
+
+plots.ChildAdded:Connect(function(plot)
+    plotAdded(plot)
 end)
 
-mouse.Button1Up:Connect(function()
-if (debounce) then
-   debounce = false
-end
-end)
+sendMessage("Success!", "Successfully loaded.")
