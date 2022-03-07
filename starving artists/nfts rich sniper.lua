@@ -1,69 +1,113 @@
-local minimum = 1000 -- minimum value and it's also buggy some times. quirky anime boy did this
+--credits to xyba
 
+--CONFIGURATION (Change to whatever you want)
+getgenv().minPlayers = 10
+getgenv().minBuyers = 5
+getgenv().serverHopAfterMinutes = 15
 
+getgenv().ToggleJoinMSG = false --toggle if message true or false
+getgenv().joinMSG = "Hey, make sure to check out my shop! :)" -- join msg
 
+getgenv().AutoClaimBooth = true --claim both true/false
 
-if game.PlaceId ~= 8916037983 then return end
+getgenv().LookForSuggarDad = false
+getgenv().minSuggardad = 100
 
-if not game.IsLoaded then game.Loaded:Wait() end
+repeat wait() until game:IsLoaded()
+wait(2)
+pcall(function()
+   if AutoClaimBooth then
+       local lp = game.Players.LocalPlayer
+       local waitForPlots = workspace:WaitForChild("Plots")
+       
+       spawn(function()
+           while not waitForPlots:FindFirstChild(lp.Name) do
+                   local unclaimed = game:GetService("Workspace").Plots:FindFirstChild("Unclaimed");
+                   if unclaimed then
+                       if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
+                           lp.Character.HumanoidRootPart.CFrame = unclaimed.Table:FindFirstChild("Bottom").CFrame + Vector3.new(0, 3, 0)
 
-local highestdono = 0
-local highestplr = nil
-
-for i,v in pairs(game:GetService("Players"):GetPlayers()) do
-   repeat wait() until v:FindFirstChild("leaderstats")
-end
-
-local function getDonated(plr)
-   local stats = plr:WaitForChild("leaderstats")
-   local donated = stats:FindFirstChild("Bought")
-   if donated == nil then
-       return 0
+                           if ToggleJoinMSG then
+                               pcall(function()
+                                   game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(joinMSG, "All")
+                                   ToggleJoinMSG = false;
+                               end)
+                           end
+                       end
+                       wait(1.5)
+                       for i, v in pairs(unclaimed:GetDescendants()) do
+                           if v.Name == "BoothClaimPrompt" then
+                               fireproximityprompt(v)
+                           end
+                       end
+                   end
+           end
+       end)
    end
-   return donated.Value
-end
 
-local function shop() -- infinite yield serverhop
-   local x = {}
-   for _, v in ipairs(game:GetService("HttpService"):JSONDecode(game:HttpGetAsync("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100")).data) do
-    if type(v) == "table" and v.maxPlayers > v.playing and v.id ~= game.JobId then
-    x[#x + 1] = v.id
-    end
+   function hop()
+       pcall(function()
+           spawn(function()
+               while wait(2) do
+local Servers = game.HttpService:JSONDecode(game:HttpGet(
+"https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"))
+                   for i, v in pairs(Servers.data) do
+                       if v.playing ~= v.maxPlayers then
+                           wait()
+                           game:GetService('TeleportService'):TeleportToPlaceInstance(game.PlaceId, v.id)
+                       end
+                   end
+               end
+           end)
+       end)
    end
-   if #x > 0 then
-    game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, x[math.random(1, #x)])
-    game:GetService("GuiService").UiMessageChanged:Wait()
-       shop()
-   else
-    return error("Couldn't find a server.")
-   end
-end
 
-for i,v in pairs(game:GetService("Players"):GetPlayers()) do
-   if i == 1 then continue end
-   local dono = getDonated(v)
-   if dono > highestdono then
-       highestdono = dono
-       highestplr = v
-   end
-end
+   local players = game.Players:GetChildren()
+   local countPlayers = #players
 
-if highestdono >= minimum then
-   local richPlayers = {}
-   for i,v in pairs(game:GetService("Players"):GetPlayers()) do
-       if i == 1 then continue end
-       if getDonated(v) >= minimum then
-           table.insert(richPlayers,v)
+   local buyers = 0
+   local suggarAmount = 0
+   for i, v in pairs(game:GetService("Players"):GetChildren()) do
+       for i, v in pairs(v:GetDescendants()) do
+           if v.Name == "Bought" then
+               if v.Value > 0 then
+                   buyers = buyers + 1
+               end
+
+               if LookForSuggarDad then
+                   if v.Value > minSuggardad then
+                       suggarAmount = suggarAmount + 1
+                   end
+               end
+           end
        end
    end
-   game:GetService("StarterGui"):SetCore("SendNotification", {
-Title = "Richest player found!",
-Text = highestplr.Name .. " has donated " .. highestdono .. "R$",
-Duration = 15
-})
-table.foreach(richPlayers,function(i)
-   print(richPlayers[i].Name .. " donated " .. tostring(getDonated(richPlayers[i])) .. "R$")
+
+   if countPlayers >= minPlayers and buyers >= minBuyers then
+       if LookForSuggarDad then
+           if suggarAmount > 0 then
+               local waitTime = serverHopAfterMinutes * 60
+               local client = game.GetService(game, "Players").LocalPlayer
+
+               for i,v in pairs(getconnections(game:GetService("Players").LocalPlayer.Idled)) do
+                   v:Disable()
+               end
+               wait(waitTime)
+               hop();
+           else
+               hop();
+           end
+       else
+           local waitTime = serverHopAfterMinutes * 60
+           local client = game.GetService(game, "Players").LocalPlayer
+
+           for i,v in pairs(getconnections(game:GetService("Players").LocalPlayer.Idled)) do
+               v:Disable()
+           end
+           wait(waitTime)
+           hop();
+       end
+   else
+       hop();
+   end
 end)
-else
-   shop()
-end
