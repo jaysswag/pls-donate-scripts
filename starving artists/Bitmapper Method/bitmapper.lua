@@ -1,4 +1,7 @@
               -- use this line to paste the CLIPBOARD.
+
+              -- heres the virus total https://www.virustotal.com/gui/file/86f1d7d95e0b3fc0c9ae679c62875d5627e2341a57f8338ed1bf54db334baa85
+              -- you need to Download .NET 6.0 for working https://dotnet.microsoft.com/en-us/download 
 local function color_pixel(index,color)
 local connection = (getconnections(UI[tostring(index)].MouseButton1Click))[1]
 setupvalue(connection.Function,9,color)
