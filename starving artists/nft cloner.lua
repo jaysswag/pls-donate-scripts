@@ -17,8 +17,8 @@ function cloneGui.buildRoot()
    cloneFrame.ToolsFrame:Destroy()
    cloneFrame.ColorFrame:Destroy()
    cloneFrame.NextButton:Destroy()
+   cloneFrame.GridHolder.Grid:Destroy()
    cloneFrame.UIAspectRatioConstraint:Destroy()
-   cloneFrame.Grid:Destroy()
    cloneFrame.Confirmation:Destroy()
    cloneFrame.AnchorPoint = Vector2.new(0, 0.5)
    cloneFrame.Position = UDim2.new(1, 10, 0.5, 0)
@@ -99,7 +99,7 @@ function cloneGui.buildScrollingFrame()
 end
 
 function cloneGui.addGrid(grid)
-   local UIStroke = player.PlayerGui.MainGui.PaintFrame.Grid.UIStroke:Clone()
+   local UIStroke = player.PlayerGui.MainGui.PaintFrame.GridHolder.Grid.UIStroke:Clone()
    local container = Instance.new('Frame')
    local preview = grid:Clone()
    
@@ -133,7 +133,7 @@ end
 function copyGrid()
    if (cloneGui.selected ~= nil) then
        local target = cloneGui.selected.Grid
-       local destination = player.PlayerGui.MainGui.PaintFrame.Grid
+       local destination = player.PlayerGui.MainGui.PaintFrame.GridHolder.Grid
        
        for i = 1, 1024 do
            destination[i].BackgroundColor3 = target[i].BackgroundColor3
@@ -148,7 +148,7 @@ function cloneGrid()
    local name = "a"
    local cells = {}
    
-   local grid = cloneGui.selected.Grid
+   local grid = cloneGui.selected.GridHolder.Grid
    for i = 1, 1024 do
       cells[i] = grid[i].BackgroundColor3:ToHex()
    end
